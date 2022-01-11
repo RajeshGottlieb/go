@@ -1,24 +1,10 @@
 package main
 
 import (
-	//"encoding/hex"
 	"github.com/RajeshGottlieb/go/pcapng"
-	//"bytes"
-	//"encoding/binary"
 	"fmt"
 	"io"
 	"os"
-	//"time"
-)
-
-const (
-	OFF      = "\033[0m"
-	RED      = "\033[31m"
-	GREEN    = "\033[32m"
-	YELLOW   = "\033[33m"
-	BLUE     = "\033[34m"
-	MAGENTA  = "\033[35m"
-	CYAN     = "\033[36m"
 )
 
 func main() {
