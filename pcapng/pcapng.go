@@ -55,32 +55,25 @@ func (b *SectionBlock) Bytes() ([]byte, error) {
 
 	buf := new(bytes.Buffer)
 
-	err := binary.Write(buf, binary.LittleEndian, uint32(0x0A0D0D0A)) // Block Type
-	if err != nil {
+	if err := binary.Write(buf, binary.LittleEndian, uint32(0x0A0D0D0A)); err != nil { // Block Type
 		return nil, err
 	}
-	err = binary.Write(buf, binary.LittleEndian, uint32(28)) // Block Total Length
-	if err != nil {
+	if err := binary.Write(buf, binary.LittleEndian, uint32(28)); err != nil { // Block Total Length
 		return nil, err
 	}
-	err = binary.Write(buf, binary.LittleEndian, uint32(0x1A2B3C4D)) // Byte-Order Magic
-	if err != nil {
+	if err := binary.Write(buf, binary.LittleEndian, uint32(0x1A2B3C4D)); err != nil { // Byte-Order Magic
 		return nil, err
 	}
-	err = binary.Write(buf, binary.LittleEndian, uint16(1)) // Major Version
-	if err != nil {
+	if err := binary.Write(buf, binary.LittleEndian, uint16(1)); err != nil { // Major Version
 		return nil, err
 	}
-	err = binary.Write(buf, binary.LittleEndian, uint16(0)) // Minor Version
-	if err != nil {
+	if err := binary.Write(buf, binary.LittleEndian, uint16(0)); err != nil { // Minor Version
 		return nil, err
 	}
-	err = binary.Write(buf, binary.LittleEndian, int64(-1)) // Section Length
-	if err != nil {
+	if err := binary.Write(buf, binary.LittleEndian, int64(-1)); err != nil { // Section Length
 		return nil, err
 	}
-	err = binary.Write(buf, binary.LittleEndian, uint32(28)) // Block Total Length
-	if err != nil {
+	if err := binary.Write(buf, binary.LittleEndian, uint32(28)); err != nil { // Block Total Length
 		return nil, err
 	}
 
@@ -99,28 +92,22 @@ func (b *InterfaceBlock) Bytes() ([]byte, error) {
 
 	buf := new(bytes.Buffer)
 
-	err := binary.Write(buf, binary.LittleEndian, uint32(0x00000001)) // Block Type
-	if err != nil {
+	if err := binary.Write(buf, binary.LittleEndian, uint32(0x00000001)); err != nil { // Block Type
 		return nil, err
 	}
-	err = binary.Write(buf, binary.LittleEndian, uint32(20)) // Block Total Length
-	if err != nil {
+	if err := binary.Write(buf, binary.LittleEndian, uint32(20)); err != nil { // Block Total Length
 		return nil, err
 	}
-	err = binary.Write(buf, binary.LittleEndian, b.LinkType) // Link Type
-	if err != nil {
+	if err := binary.Write(buf, binary.LittleEndian, b.LinkType); err != nil { // Link Type
 		return nil, err
 	}
-	err = binary.Write(buf, binary.LittleEndian, uint16(0)) // Reserved
-	if err != nil {
+	if err := binary.Write(buf, binary.LittleEndian, uint16(0)); err != nil { // Reserved
 		return nil, err
 	}
-	err = binary.Write(buf, binary.LittleEndian, b.SnapLen) // SnapLen
-	if err != nil {
+	if err := binary.Write(buf, binary.LittleEndian, b.SnapLen); err != nil { // SnapLen
 		return nil, err
 	}
-	err = binary.Write(buf, binary.LittleEndian, uint32(20)) // Block Total Length
-	if err != nil {
+	if err := binary.Write(buf, binary.LittleEndian, uint32(20)); err != nil { // Block Total Length
 		return nil, err
 	}
 
@@ -142,53 +129,43 @@ func (b *EnhancedPacketBlock) Bytes() ([]byte, error) {
 
 	buf := new(bytes.Buffer)
 
-	err := binary.Write(buf, binary.LittleEndian, uint32(0x00000006)) // Block Type
-	if err != nil {
+	if err := binary.Write(buf, binary.LittleEndian, uint32(0x00000006)); err != nil { // Block Type
 		return nil, err
 	}
 
 	padding := (4 - (len(b.PacketData) & 3)) & 3
 	blockTotalLength := uint32(32 + len(b.PacketData) + padding)
 
-	err = binary.Write(buf, binary.LittleEndian, blockTotalLength) // Block Total Length
-	if err != nil {
+	if err := binary.Write(buf, binary.LittleEndian, blockTotalLength); err != nil { // Block Total Length
 		return nil, err
 	}
-	err = binary.Write(buf, binary.LittleEndian, b.InterfaceID) // Interface ID
-	if err != nil {
+	if err := binary.Write(buf, binary.LittleEndian, b.InterfaceID); err != nil { // Interface ID
 		return nil, err
 	}
-	err = binary.Write(buf, binary.LittleEndian, b.TimestampHigh) // Timestamp (High)
-	if err != nil {
+	if err := binary.Write(buf, binary.LittleEndian, b.TimestampHigh); err != nil { // Timestamp (High)
 		return nil, err
 	}
-	err = binary.Write(buf, binary.LittleEndian, b.TimestampLow) // Timestamp (Low)
-	if err != nil {
+	if err := binary.Write(buf, binary.LittleEndian, b.TimestampLow); err != nil { // Timestamp (Low)
 		return nil, err
 	}
-	err = binary.Write(buf, binary.LittleEndian, uint32(len(b.PacketData))) // Captured Packet Length
-	if err != nil {
+	if err := binary.Write(buf, binary.LittleEndian, uint32(len(b.PacketData))); err != nil { // Captured Packet Length
 		return nil, err
 	}
-	err = binary.Write(buf, binary.LittleEndian, b.OriginalPacketLength) // Original Packet Length
-	if err != nil {
+	if err := binary.Write(buf, binary.LittleEndian, b.OriginalPacketLength); err != nil { // Original Packet Length
 		return nil, err
 	}
 
-	_, err = buf.Write(b.PacketData) // Packet Data
-	if err != nil {
+	if _, err := buf.Write(b.PacketData); err != nil { // Packet Data
 		return nil, err
 	}
 
 	for i := 0; i < padding; i++ {
-		err = binary.Write(buf, binary.LittleEndian, uint8(0)) // padding
-		if err != nil {
+		if err := binary.Write(buf, binary.LittleEndian, uint8(0)); err != nil { // padding
 			return nil, err
 		}
 	}
 
-	err = binary.Write(buf, binary.LittleEndian, blockTotalLength) // Block Total Length
-	if err != nil {
+	if err := binary.Write(buf, binary.LittleEndian, blockTotalLength); err != nil { // Block Total Length
 		return nil, err
 	}
 
@@ -227,9 +204,9 @@ func Reader(fh io.Reader) (pr *PcapngReader) {
 func (pr *PcapngReader) Read() (block interface{}, err error) {
 	// the minimum sized block is 12 bytes
 	buf := make([]byte, 12)
-	count, err := pr.fh.Read(buf) // read block type and block length
 
-	if err != nil {
+	// read block type and block length
+	if count, err := pr.fh.Read(buf); err != nil {
 		return nil, err
 	} else if count != len(buf) {
 		return nil, &PcapError{fmt.Sprintf("read %v packet header bytes expected %v\n", count, len(buf))}
@@ -237,8 +214,7 @@ func (pr *PcapngReader) Read() (block interface{}, err error) {
 
 	var blockType uint32
 
-	err = binary.Read(bytes.NewReader(buf[0:4]), pr.Endian, &blockType)
-	if err != nil {
+	if err := binary.Read(bytes.NewReader(buf[0:4]), pr.Endian, &blockType); err != nil {
 		return nil, err
 	}
 //  fmt.Printf("blockType=0x%08x\n", blockType)
@@ -248,8 +224,7 @@ func (pr *PcapngReader) Read() (block interface{}, err error) {
 	if blockType == 0x0A0D0D0A { // SectionHeaderBlock
 		// The endianness is indicated by the Section Header Block
 		//var byteOrderMagic uint32
-		err = binary.Read(bytes.NewReader(buf[8:12]), pr.Endian, &byteOrderMagic)
-		if err != nil {
+		if err := binary.Read(bytes.NewReader(buf[8:12]), pr.Endian, &byteOrderMagic); err != nil {
 			return nil, err
 		}
 	//  fmt.Printf("byteOrderMagic=0x%x\n", byteOrderMagic)
@@ -262,8 +237,7 @@ func (pr *PcapngReader) Read() (block interface{}, err error) {
 	}
 
 	var blockTotalLength uint32
-	err = binary.Read(bytes.NewReader(buf[4:8]), pr.Endian, &blockTotalLength)
-	if err != nil {
+	if err := binary.Read(bytes.NewReader(buf[4:8]), pr.Endian, &blockTotalLength); err != nil {
 		return nil, err
 	}
 //  fmt.Printf("blockTotalLength=%v\n", blockTotalLength)
@@ -274,8 +248,8 @@ func (pr *PcapngReader) Read() (block interface{}, err error) {
 		copy(grow, buf)
 		buf = grow
 
-		count, err = pr.fh.Read(buf[12:]) // read the rest of the block
-		if err != nil {
+		// read the rest of the block
+		if count, err := pr.fh.Read(buf[12:]); err != nil {
 			return nil, err
 		} else if count != len(buf)-12 {
 			return nil, &PcapError{fmt.Sprintf("read %v bytes expected %v\n", count, len(buf)-12)}
@@ -294,16 +268,13 @@ func (pr *PcapngReader) Read() (block interface{}, err error) {
 		var minorVersion uint16
 		var sectionLength int64
 
-		err = binary.Read(bytes.NewBuffer(buf[12:14]), pr.Endian, &majorVersion)
-		if err != nil {
+		if err := binary.Read(bytes.NewBuffer(buf[12:14]), pr.Endian, &majorVersion); err != nil {
 			return nil, err
 		}
-		err = binary.Read(bytes.NewBuffer(buf[14:16]), pr.Endian, &minorVersion)
-		if err != nil {
+		if err := binary.Read(bytes.NewBuffer(buf[14:16]), pr.Endian, &minorVersion); err != nil {
 			return nil, err
 		}
-		err = binary.Read(bytes.NewBuffer(buf[16:24]), pr.Endian, &sectionLength)
-		if err != nil {
+		if err := binary.Read(bytes.NewBuffer(buf[16:24]), pr.Endian, &sectionLength); err != nil {
 			return nil, err
 		}
 
@@ -320,12 +291,10 @@ func (pr *PcapngReader) Read() (block interface{}, err error) {
 		var linkType   uint16
 		var snapLen    uint32
 
-		err = binary.Read(bytes.NewBuffer(buf[8:10]), pr.Endian, &linkType)
-		if err != nil {
+		if err := binary.Read(bytes.NewBuffer(buf[8:10]), pr.Endian, &linkType); err != nil {
 			return nil, err
 		}
-		err = binary.Read(bytes.NewBuffer(buf[12:16]), pr.Endian, &snapLen)
-		if err != nil {
+		if err := binary.Read(bytes.NewBuffer(buf[12:16]), pr.Endian, &snapLen); err != nil {
 			return nil, err
 		}
 
@@ -343,28 +312,23 @@ func (pr *PcapngReader) Read() (block interface{}, err error) {
 		var capturedPacketLength uint32
 		var originalPacketLength uint32
 
-		err = binary.Read(bytes.NewBuffer(buf[8:12]), pr.Endian, &interfaceID)
-		if err != nil {
+		if err := binary.Read(bytes.NewBuffer(buf[8:12]), pr.Endian, &interfaceID); err != nil {
 			return nil, err
 		}
 	//  fmt.Printf("interfaceID=%v\n", interfaceID)
-		err = binary.Read(bytes.NewBuffer(buf[12:16]), pr.Endian, &timestampHigh)
-		if err != nil {
+		if err := binary.Read(bytes.NewBuffer(buf[12:16]), pr.Endian, &timestampHigh); err != nil {
 			return nil, err
 		}
 	//  fmt.Printf("timestampHigh=%v\n", timestampHigh)
-		err = binary.Read(bytes.NewBuffer(buf[16:20]), pr.Endian, &timestampLow)
-		if err != nil {
+		if err := binary.Read(bytes.NewBuffer(buf[16:20]), pr.Endian, &timestampLow); err != nil {
 			return nil, err
 		}
 	//  fmt.Printf("timestampLow=%v\n", timestampLow)
-		err = binary.Read(bytes.NewBuffer(buf[20:24]), pr.Endian, &capturedPacketLength)
-		if err != nil {
+		if err := binary.Read(bytes.NewBuffer(buf[20:24]), pr.Endian, &capturedPacketLength); err != nil {
 			return nil, err
 		}
 	//  fmt.Printf("capturedPacketLength=%v\n", capturedPacketLength)
-		err = binary.Read(bytes.NewBuffer(buf[24:28]), pr.Endian, &originalPacketLength)
-		if err != nil {
+		if err := binary.Read(bytes.NewBuffer(buf[24:28]), pr.Endian, &originalPacketLength); err != nil {
 			return nil, err
 		}
 	//  fmt.Printf("originalPacketLength=%v\n", originalPacketLength)
@@ -384,14 +348,14 @@ func (pr *PcapngReader) Read() (block interface{}, err error) {
 	return block, nil
 }
 
-// PcapngWriter encapsulates all the pcap reading logic
+// PcapngWriter encapsulates all the pcapng writing logic
 type PcapngWriter struct {
 	fh         io.Writer
 	Endian     binary.ByteOrder
 }
 
-// Writer opens a pcap file for reading.
-// It returns a PcapngReader if successful.
+// Writer opens a pcap file for writing.
+// It returns a PcapngWriter if successful.
 func Writer(fh io.Writer) (pw *PcapngWriter) {
 
 	pw = new(PcapngWriter)
