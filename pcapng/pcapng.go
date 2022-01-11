@@ -43,8 +43,8 @@ func (b *GenericBlock) Bytes() ([]byte, error) {
 
 // Block Type = 0x0A0D0D0A
 type SectionBlock struct {
-    GenericBlock
-
+	Type		uint32
+	TotalLength	uint32
 	ByteOrderMagic  uint32
 	MajorVersion    uint16
 	MinorVersion    uint16
@@ -82,8 +82,8 @@ func (b *SectionBlock) Bytes() ([]byte, error) {
 
 // Block Type = 0x00000001
 type InterfaceBlock struct {
-    GenericBlock
-
+	Type		uint32
+	TotalLength	uint32
 	LinkType    uint16
 	SnapLen    uint32
 }
@@ -115,8 +115,8 @@ func (b *InterfaceBlock) Bytes() ([]byte, error) {
 }
 
 type EnhancedPacketBlock struct {
-    GenericBlock
-
+	Type		uint32
+	TotalLength	uint32
 	InterfaceID          uint32
 	TimestampHigh        uint32
 	TimestampLow         uint32
@@ -279,7 +279,8 @@ func (pr *PcapngReader) Read() (block interface{}, err error) {
 		}
 
 		block = &SectionBlock {
-			GenericBlock{blockType, blockTotalLength, buf},
+			blockType,
+			blockTotalLength,
 			byteOrderMagic,
 			majorVersion,
 			minorVersion,
@@ -299,7 +300,8 @@ func (pr *PcapngReader) Read() (block interface{}, err error) {
 		}
 
 		block = &InterfaceBlock {
-			GenericBlock{blockType, blockTotalLength, buf},
+			blockType,
+			blockTotalLength,
 			linkType,
 			snapLen,
 		}
@@ -334,7 +336,8 @@ func (pr *PcapngReader) Read() (block interface{}, err error) {
 	//  fmt.Printf("originalPacketLength=%v\n", originalPacketLength)
 
 		block = &EnhancedPacketBlock {
-			GenericBlock{blockType, blockTotalLength, buf},
+			blockType,
+			blockTotalLength,
 			interfaceID,
 			timestampHigh,
 			timestampLow,
