@@ -83,6 +83,35 @@ func main() {
 				panic(err)
 			}
 
+		} else if b, ok := block.(*pcapng.InterfaceStatisticsBlock); ok {
+
+			fmt.Printf("# InterfaceStatisticsBlock %v: Type=0x%08x TotalLength=%v\n", count+1, b.Type, b.TotalLength)
+
+			for _, opt := range b.Options {
+				switch option := opt.(type) {
+				case *pcapng.Opt_Comment:
+					fmt.Printf("#  opt_comment=%v\n", option.Value)
+				case *pcapng.Isb_Starttime:
+					fmt.Printf("#  isb_starttime=%v,%v\n", option.TimestampHigh, option.TimestampLow)
+				case *pcapng.Isb_Endtime:
+					fmt.Printf("#  isb_endtime=%v,%v\n", option.TimestampHigh, option.TimestampLow)
+				case *pcapng.Isb_Ifrecv:
+					fmt.Printf("#  isb_ifrecv=%v\n", option.Value)
+				case *pcapng.Isb_Ifdrop:
+					fmt.Printf("#  isb_ifdrop=%v\n", option.Value)
+				case *pcapng.Isb_Filteraccept:
+					fmt.Printf("#  isb_filteraccept=%v\n", option.Value)
+				case *pcapng.Isb_Osdrop:
+					fmt.Printf("#  isb_osdrop=%v\n", option.Value)
+				case *pcapng.Isb_Usrdeliv:
+					fmt.Printf("#  isb_usrdeliv=%v\n", option.Value)
+				}
+			}
+
+			if err = pw.Write(b); err != nil {
+				panic(err)
+			}
+
 		} else if b, ok := block.(*pcapng.EnhancedPacketBlock); ok {
 
 			fmt.Printf("# EnhancedPacketBlock %v: Type=0x%08x TotalLength=%v\n", count+1, b.Type, b.TotalLength)
