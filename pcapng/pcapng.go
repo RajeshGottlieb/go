@@ -305,12 +305,12 @@ func (b *InterfaceBlock) Pack(endian binary.ByteOrder) ([]byte, error) {
 }
 
 type InterfaceStatisticsBlock struct {
-	Type           uint32
-	TotalLength    uint32
-	InterfaceID    uint32
-	TimestampHigh  uint32
-	TimestampLow   uint32
-	Options        []Option
+	Type          uint32
+	TotalLength   uint32
+	InterfaceID   uint32
+	TimestampHigh uint32
+	TimestampLow  uint32
+	Options       []Option
 }
 
 func (b *InterfaceStatisticsBlock) Pack(endian binary.ByteOrder) ([]byte, error) {
@@ -351,8 +351,8 @@ func (b *InterfaceStatisticsBlock) Pack(endian binary.ByteOrder) ([]byte, error)
 }
 
 type Isb_Starttime struct {
-	TimestampHigh        uint32
-	TimestampLow         uint32
+	TimestampHigh uint32
+	TimestampLow  uint32
 }
 
 func (opt *Isb_Starttime) Pack(endian binary.ByteOrder) ([]byte, error) {
@@ -364,8 +364,8 @@ func (opt *Isb_Starttime) Pack(endian binary.ByteOrder) ([]byte, error) {
 }
 
 type Isb_Endtime struct {
-	TimestampHigh        uint32
-	TimestampLow         uint32
+	TimestampHigh uint32
+	TimestampLow  uint32
 }
 
 func (opt *Isb_Endtime) Pack(endian binary.ByteOrder) ([]byte, error) {
@@ -377,7 +377,7 @@ func (opt *Isb_Endtime) Pack(endian binary.ByteOrder) ([]byte, error) {
 }
 
 type Isb_Ifrecv struct {
-	Value        uint64
+	Value uint64
 }
 
 func (opt *Isb_Ifrecv) Pack(endian binary.ByteOrder) ([]byte, error) {
@@ -389,7 +389,7 @@ func (opt *Isb_Ifrecv) Pack(endian binary.ByteOrder) ([]byte, error) {
 }
 
 type Isb_Ifdrop struct {
-	Value        uint64
+	Value uint64
 }
 
 func (opt *Isb_Ifdrop) Pack(endian binary.ByteOrder) ([]byte, error) {
@@ -401,7 +401,7 @@ func (opt *Isb_Ifdrop) Pack(endian binary.ByteOrder) ([]byte, error) {
 }
 
 type Isb_Filteraccept struct {
-	Value        uint64
+	Value uint64
 }
 
 func (opt *Isb_Filteraccept) Pack(endian binary.ByteOrder) ([]byte, error) {
@@ -413,7 +413,7 @@ func (opt *Isb_Filteraccept) Pack(endian binary.ByteOrder) ([]byte, error) {
 }
 
 type Isb_Osdrop struct {
-	Value        uint64
+	Value uint64
 }
 
 func (opt *Isb_Osdrop) Pack(endian binary.ByteOrder) ([]byte, error) {
@@ -425,7 +425,7 @@ func (opt *Isb_Osdrop) Pack(endian binary.ByteOrder) ([]byte, error) {
 }
 
 type Isb_Usrdeliv struct {
-	Value        uint64
+	Value uint64
 }
 
 func (opt *Isb_Usrdeliv) Pack(endian binary.ByteOrder) ([]byte, error) {
@@ -650,9 +650,9 @@ func (pr *PcapngReader) Read() (block interface{}, err error) {
 
 	var byteOrderMagic uint32
 
-	if blockType == SECTION_HEADER_BLOCK { // SectionHeaderBlock
+	if blockType == SECTION_HEADER_BLOCK {
 		// The endianness is indicated by the Section Header Block
-		//var byteOrderMagic uint32
+
 		if err := binary.Read(bytes.NewReader(buf[8:12]), pr.Endian, &byteOrderMagic); err != nil {
 			return nil, err
 		}
@@ -691,13 +691,9 @@ func (pr *PcapngReader) Read() (block interface{}, err error) {
 		var minorVersion uint16
 		var sectionLength int64
 
-		if err := binary.Read(bytes.NewBuffer(buf[12:14]), pr.Endian, &majorVersion); err != nil {
-			return nil, err
-		}
-		if err := binary.Read(bytes.NewBuffer(buf[14:16]), pr.Endian, &minorVersion); err != nil {
-			return nil, err
-		}
-		if err := binary.Read(bytes.NewBuffer(buf[16:24]), pr.Endian, &sectionLength); err != nil {
+		if binary.Read(bytes.NewBuffer(buf[12:14]), pr.Endian, &majorVersion) != nil ||
+			binary.Read(bytes.NewBuffer(buf[14:16]), pr.Endian, &minorVersion) != nil ||
+			binary.Read(bytes.NewBuffer(buf[16:24]), pr.Endian, &sectionLength) != nil {
 			return nil, err
 		}
 
@@ -738,10 +734,8 @@ func (pr *PcapngReader) Read() (block interface{}, err error) {
 		var linkType uint16
 		var snapLen uint32
 
-		if err := binary.Read(bytes.NewBuffer(buf[8:10]), pr.Endian, &linkType); err != nil {
-			return nil, err
-		}
-		if err := binary.Read(bytes.NewBuffer(buf[12:16]), pr.Endian, &snapLen); err != nil {
+		if binary.Read(bytes.NewBuffer(buf[8:10]), pr.Endian, &linkType) != nil ||
+			binary.Read(bytes.NewBuffer(buf[12:16]), pr.Endian, &snapLen) != nil {
 			return nil, err
 		}
 
@@ -782,17 +776,13 @@ func (pr *PcapngReader) Read() (block interface{}, err error) {
 		var timestampHigh uint32
 		var timestampLow uint32
 
-		if err := binary.Read(bytes.NewBuffer(buf[8:12]), pr.Endian, &interfaceID); err != nil {
+		if binary.Read(bytes.NewBuffer(buf[8:12]), pr.Endian, &interfaceID) != nil ||
+			binary.Read(bytes.NewBuffer(buf[12:16]), pr.Endian, &timestampHigh) != nil ||
+			binary.Read(bytes.NewBuffer(buf[16:20]), pr.Endian, &timestampLow) != nil {
 			return nil, err
 		}
-		//  fmt.Printf("interfaceID=%v\n", interfaceID)
-		if err := binary.Read(bytes.NewBuffer(buf[12:16]), pr.Endian, &timestampHigh); err != nil {
-			return nil, err
-		}
-		//  fmt.Printf("timestampHigh=%v\n", timestampHigh)
-		if err := binary.Read(bytes.NewBuffer(buf[16:20]), pr.Endian, &timestampLow); err != nil {
-			return nil, err
-		}
+		//fmt.Printf("interfaceID=%v\n", interfaceID)
+		//fmt.Printf("timestampHigh=%v\n", timestampHigh)
 
 		optionLen := int(blockTotalLength) - 24
 		optionBuf := buf[20 : 20+optionLen]
@@ -869,25 +859,17 @@ func (pr *PcapngReader) Read() (block interface{}, err error) {
 		var capturedPacketLength uint32
 		var originalPacketLength uint32
 
-		if err := binary.Read(bytes.NewBuffer(buf[8:12]), pr.Endian, &interfaceID); err != nil {
+		if binary.Read(bytes.NewBuffer(buf[8:12]), pr.Endian, &interfaceID) != nil ||
+			binary.Read(bytes.NewBuffer(buf[12:16]), pr.Endian, &timestampHigh) != nil ||
+			binary.Read(bytes.NewBuffer(buf[16:20]), pr.Endian, &timestampLow) != nil ||
+			binary.Read(bytes.NewBuffer(buf[20:24]), pr.Endian, &capturedPacketLength) != nil ||
+			binary.Read(bytes.NewBuffer(buf[24:28]), pr.Endian, &originalPacketLength) != nil {
 			return nil, err
 		}
-		//  fmt.Printf("interfaceID=%v\n", interfaceID)
-		if err := binary.Read(bytes.NewBuffer(buf[12:16]), pr.Endian, &timestampHigh); err != nil {
-			return nil, err
-		}
-		//  fmt.Printf("timestampHigh=%v\n", timestampHigh)
-		if err := binary.Read(bytes.NewBuffer(buf[16:20]), pr.Endian, &timestampLow); err != nil {
-			return nil, err
-		}
-		//  fmt.Printf("timestampLow=%v\n", timestampLow)
-		if err := binary.Read(bytes.NewBuffer(buf[20:24]), pr.Endian, &capturedPacketLength); err != nil {
-			return nil, err
-		}
+		//fmt.Printf("interfaceID=%v\n", interfaceID)
+		//fmt.Printf("timestampHigh=%v\n", timestampHigh)
+		//fmt.Printf("timestampLow=%v\n", timestampLow)
 		//fmt.Printf("capturedPacketLength=%v\n", capturedPacketLength)
-		if err := binary.Read(bytes.NewBuffer(buf[24:28]), pr.Endian, &originalPacketLength); err != nil {
-			return nil, err
-		}
 
 		packetData := buf[28 : 28+capturedPacketLength]
 		//fmt.Printf("originalPacketLength=%v\n", originalPacketLength)
@@ -912,36 +894,36 @@ func (pr *PcapngReader) Read() (block interface{}, err error) {
 				options = append(options, &Opt_Comment{string(opt.Value)})
 			case epb_flags:
 				var option Epb_Flags
-				if err := binary.Read(bytes.NewBuffer(opt.Value), pr.Endian, &option.Value); err != nil {
+				if err := binary.Read(bytes.NewBuffer(opt.Value), pr.Endian, &option); err != nil {
 					return nil, err
 				}
 				options = append(options, &option)
 			case epb_hash:
 				var option Epb_Hash
-				if err := binary.Read(bytes.NewBuffer(opt.Value), pr.Endian, &option.Value); err != nil {
+				if err := binary.Read(bytes.NewBuffer(opt.Value), pr.Endian, &option); err != nil {
 					return nil, err
 				}
 				options = append(options, &option)
 			case epb_dropcount:
 				var option Epb_Dropcount
-				if err := binary.Read(bytes.NewBuffer(opt.Value), pr.Endian, &option.Value); err != nil {
+				if err := binary.Read(bytes.NewBuffer(opt.Value), pr.Endian, &option); err != nil {
 					return nil, err
 				}
 				options = append(options, &option)
 			case epb_packetid:
 				var option Epb_Packetid
-				if err := binary.Read(bytes.NewBuffer(opt.Value), pr.Endian, &option.Value); err != nil {
+				if err := binary.Read(bytes.NewBuffer(opt.Value), pr.Endian, &option); err != nil {
 					return nil, err
 				}
 				options = append(options, &option)
 			case epb_queue:
 				var option Epb_Queue
-				if err := binary.Read(bytes.NewBuffer(opt.Value), pr.Endian, &option.Value); err != nil {
+				if err := binary.Read(bytes.NewBuffer(opt.Value), pr.Endian, &option); err != nil {
 					return nil, err
 				}
 				options = append(options, &option)
 				/*
-			case epb_verdict:
+					case epb_verdict:
 				*/
 			}
 		}
