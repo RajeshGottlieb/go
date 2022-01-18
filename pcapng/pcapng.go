@@ -32,6 +32,10 @@ type Option interface {
 	Packer
 }
 
+type NbrRecord interface {
+	Packer
+}
+
 type Block interface {
 	Packer
 }
@@ -90,18 +94,30 @@ const (
 	epb_packetid  = 5
 	epb_queue     = 6
 	epb_verdict   = 7
+
+	// Name Resolution Block
+	ns_dnsname    = 2
+	ns_dnsIP4addr = 3
+	ns_dnsIP6addr = 4
 )
 
-func packOption(optionType int, optionValue []byte, endian binary.ByteOrder) ([]byte, error) {
+// Name Resolution Record types
+const (
+	nrb_record_end  = 0
+	nrb_record_ipv4 = 1
+	nrb_record_ipv6 = 2
+)
+
+func packTlv(tlvType int, tlvValue []byte, endian binary.ByteOrder) ([]byte, error) {
 	buf := new(bytes.Buffer)
 
-	if err := binary.Write(buf, endian, uint16(optionType)); err != nil { // Type
+	if err := binary.Write(buf, endian, uint16(tlvType)); err != nil { // Type
 		return nil, err
 	}
-	if err := binary.Write(buf, endian, uint16(len(optionValue))); err != nil { // Length
+	if err := binary.Write(buf, endian, uint16(len(tlvValue))); err != nil { // Length
 		return nil, err
 	}
-	if _, err := buf.Write(optionValue); err != nil { // value
+	if _, err := buf.Write(tlvValue); err != nil { // value
 		return nil, err
 	}
 
@@ -119,7 +135,7 @@ type Opt_Comment struct {
 }
 
 func (opt *Opt_Comment) Pack(endian binary.ByteOrder) ([]byte, error) {
-	return packOption(opt_comment, []byte(opt.Value), endian)
+	return packTlv(opt_comment, []byte(opt.Value), endian)
 }
 
 type SectionBlock struct {
@@ -137,7 +153,7 @@ type Shb_Hardware struct {
 }
 
 func (opt *Shb_Hardware) Pack(endian binary.ByteOrder) ([]byte, error) {
-	return packOption(shb_hardware, []byte(opt.Value), endian)
+	return packTlv(shb_hardware, []byte(opt.Value), endian)
 }
 
 type Shb_Os struct {
@@ -145,7 +161,7 @@ type Shb_Os struct {
 }
 
 func (opt *Shb_Os) Pack(endian binary.ByteOrder) ([]byte, error) {
-	return packOption(shb_os, []byte(opt.Value), endian)
+	return packTlv(shb_os, []byte(opt.Value), endian)
 }
 
 type Shb_Userappl struct {
@@ -153,13 +169,14 @@ type Shb_Userappl struct {
 }
 
 func (opt *Shb_Userappl) Pack(endian binary.ByteOrder) ([]byte, error) {
-	return packOption(shb_userappl, []byte(opt.Value), endian)
+	return packTlv(shb_userappl, []byte(opt.Value), endian)
 }
 
 func packOptions(options []Option, endian binary.ByteOrder) ([]byte, error) {
 
 	buf := new(bytes.Buffer)
 
+	// All the block bodies MAY embed optional fields.
 	if len(options) > 0 {
 		for _, opt := range options {
 			bytes, err := opt.Pack(endian)
@@ -168,7 +185,7 @@ func packOptions(options []Option, endian binary.ByteOrder) ([]byte, error) {
 			}
 			buf.Write(bytes)
 		}
-		// must put an opt_endofopt option at the end of the option list
+		// Code that writes pcapng files MUST put an opt_endofopt option at the end of an option list.
 		if err := binary.Write(buf, endian, uint16(opt_endofopt)); err != nil {
 			return nil, err
 		}
@@ -176,6 +193,29 @@ func packOptions(options []Option, endian binary.ByteOrder) ([]byte, error) {
 			return nil, err
 		}
 	}
+	return buf.Bytes(), nil
+}
+
+func packRecords(records []NbrRecord, endian binary.ByteOrder) ([]byte, error) {
+
+	buf := new(bytes.Buffer)
+
+	for _, rec := range records {
+		bytes, err := rec.Pack(endian)
+		if err != nil {
+			return nil, err
+		}
+		buf.Write(bytes)
+	}
+	// An nrb_record_end MUST be added after the last Record, and
+	// MUST exist even if there are no other Records in the NRB.
+	if err := binary.Write(buf, endian, uint16(nrb_record_end)); err != nil {
+		return nil, err
+	}
+	if err := binary.Write(buf, endian, uint16(0)); err != nil {
+		return nil, err
+	}
+
 	return buf.Bytes(), nil
 }
 
@@ -231,7 +271,7 @@ type If_Name struct {
 }
 
 func (opt *If_Name) Pack(endian binary.ByteOrder) ([]byte, error) {
-	return packOption(if_name, []byte(opt.Value), endian)
+	return packTlv(if_name, []byte(opt.Value), endian)
 }
 
 type If_Tsresol struct {
@@ -265,7 +305,7 @@ type If_Os struct {
 }
 
 func (opt *If_Os) Pack(endian binary.ByteOrder) ([]byte, error) {
-	return packOption(if_os, []byte(opt.Value), endian)
+	return packTlv(if_os, []byte(opt.Value), endian)
 }
 
 func (b *InterfaceBlock) Pack(endian binary.ByteOrder) ([]byte, error) {
@@ -360,7 +400,7 @@ func (opt *Isb_Starttime) Pack(endian binary.ByteOrder) ([]byte, error) {
 	if err := binary.Write(buf, endian, opt); err != nil {
 		return nil, err
 	}
-	return packOption(isb_starttime, buf.Bytes(), endian)
+	return packTlv(isb_starttime, buf.Bytes(), endian)
 }
 
 type Isb_Endtime struct {
@@ -373,7 +413,7 @@ func (opt *Isb_Endtime) Pack(endian binary.ByteOrder) ([]byte, error) {
 	if err := binary.Write(buf, endian, opt); err != nil {
 		return nil, err
 	}
-	return packOption(isb_endtime, buf.Bytes(), endian)
+	return packTlv(isb_endtime, buf.Bytes(), endian)
 }
 
 type Isb_Ifrecv struct {
@@ -385,7 +425,7 @@ func (opt *Isb_Ifrecv) Pack(endian binary.ByteOrder) ([]byte, error) {
 	if err := binary.Write(buf, endian, opt); err != nil {
 		return nil, err
 	}
-	return packOption(isb_ifrecv, buf.Bytes(), endian)
+	return packTlv(isb_ifrecv, buf.Bytes(), endian)
 }
 
 type Isb_Ifdrop struct {
@@ -397,7 +437,7 @@ func (opt *Isb_Ifdrop) Pack(endian binary.ByteOrder) ([]byte, error) {
 	if err := binary.Write(buf, endian, opt); err != nil {
 		return nil, err
 	}
-	return packOption(isb_ifdrop, buf.Bytes(), endian)
+	return packTlv(isb_ifdrop, buf.Bytes(), endian)
 }
 
 type Isb_Filteraccept struct {
@@ -409,7 +449,7 @@ func (opt *Isb_Filteraccept) Pack(endian binary.ByteOrder) ([]byte, error) {
 	if err := binary.Write(buf, endian, opt); err != nil {
 		return nil, err
 	}
-	return packOption(isb_filteraccept, buf.Bytes(), endian)
+	return packTlv(isb_filteraccept, buf.Bytes(), endian)
 }
 
 type Isb_Osdrop struct {
@@ -421,7 +461,7 @@ func (opt *Isb_Osdrop) Pack(endian binary.ByteOrder) ([]byte, error) {
 	if err := binary.Write(buf, endian, opt); err != nil {
 		return nil, err
 	}
-	return packOption(isb_osdrop, buf.Bytes(), endian)
+	return packTlv(isb_osdrop, buf.Bytes(), endian)
 }
 
 type Isb_Usrdeliv struct {
@@ -433,7 +473,7 @@ func (opt *Isb_Usrdeliv) Pack(endian binary.ByteOrder) ([]byte, error) {
 	if err := binary.Write(buf, endian, opt); err != nil {
 		return nil, err
 	}
-	return packOption(isb_usrdeliv, buf.Bytes(), endian)
+	return packTlv(isb_usrdeliv, buf.Bytes(), endian)
 }
 
 type EnhancedPacketBlock struct {
@@ -512,7 +552,7 @@ func (opt *Epb_Flags) Pack(endian binary.ByteOrder) ([]byte, error) {
 	if err := binary.Write(buf, endian, opt); err != nil {
 		return nil, err
 	}
-	return packOption(epb_flags, buf.Bytes(), endian)
+	return packTlv(epb_flags, buf.Bytes(), endian)
 }
 
 type Epb_Hash struct {
@@ -520,7 +560,7 @@ type Epb_Hash struct {
 }
 
 func (opt *Epb_Hash) Pack(endian binary.ByteOrder) ([]byte, error) {
-	return packOption(epb_hash, opt.Value, endian)
+	return packTlv(epb_hash, opt.Value, endian)
 }
 
 type Epb_Dropcount struct {
@@ -532,7 +572,7 @@ func (opt *Epb_Dropcount) Pack(endian binary.ByteOrder) ([]byte, error) {
 	if err := binary.Write(buf, endian, opt); err != nil {
 		return nil, err
 	}
-	return packOption(epb_hash, buf.Bytes(), endian)
+	return packTlv(epb_hash, buf.Bytes(), endian)
 }
 
 type Epb_Packetid struct {
@@ -544,7 +584,7 @@ func (opt *Epb_Packetid) Pack(endian binary.ByteOrder) ([]byte, error) {
 	if err := binary.Write(buf, endian, opt); err != nil {
 		return nil, err
 	}
-	return packOption(epb_hash, buf.Bytes(), endian)
+	return packTlv(epb_hash, buf.Bytes(), endian)
 }
 
 type Epb_Queue struct {
@@ -556,7 +596,7 @@ func (opt *Epb_Queue) Pack(endian binary.ByteOrder) ([]byte, error) {
 	if err := binary.Write(buf, endian, opt); err != nil {
 		return nil, err
 	}
-	return packOption(epb_queue, buf.Bytes(), endian)
+	return packTlv(epb_queue, buf.Bytes(), endian)
 }
 
 /*
@@ -564,6 +604,92 @@ type Epb_Verdict struct {
 	// TODO
 }
 */
+
+type NameResolutionBlock struct {
+	Type                 uint32
+	TotalLength          uint32
+	Records              []NbrRecord
+	Options              []Option
+}
+
+func (b *NameResolutionBlock) Pack(endian binary.ByteOrder) ([]byte, error) {
+
+	records, err := packRecords(b.Records, endian)
+	if err != nil {
+		return nil, err
+	}
+
+	options, err := packOptions(b.Options, endian)
+	if err != nil {
+		return nil, err
+	}
+
+	blockTotalLength := uint32(12 + len(records) + len(options))
+
+	buf := new(bytes.Buffer)
+
+	if err := binary.Write(buf, endian, uint32(NAME_RESOLUTION_BLOCK)); err != nil { // Block Type
+		return nil, err
+	}
+	if err := binary.Write(buf, endian, blockTotalLength); err != nil { // Block Total Length
+		return nil, err
+	}
+
+	if _, err := buf.Write(records); err != nil { // records
+		return nil, err
+	}
+
+	if _, err := buf.Write(options); err != nil { // options
+		return nil, err
+	}
+
+	if err := binary.Write(buf, endian, blockTotalLength); err != nil { // Block Total Length
+		return nil, err
+	}
+
+	return buf.Bytes(), nil
+}
+
+// 
+type Nrb_Record_ipv4 struct {
+	Value []byte
+}
+
+type Nrb_Record_ipv6 struct {
+	Value []byte
+}
+
+func (rec *Nrb_Record_ipv4) Pack(endian binary.ByteOrder) ([]byte, error) {
+	return packTlv(nrb_record_ipv4, rec.Value, endian)
+}
+
+func (rec *Nrb_Record_ipv6) Pack(endian binary.ByteOrder) ([]byte, error) {
+	return packTlv(nrb_record_ipv6, rec.Value, endian)
+}
+
+type Ns_Dnsname struct {
+	Value string
+}
+
+func (opt *Ns_Dnsname) Pack(endian binary.ByteOrder) ([]byte, error) {
+	return packTlv(ns_dnsname, []byte(opt.Value), endian)
+}
+
+type Ns_DnsIP4addr struct {
+	Value [4]byte
+}
+
+func (opt *Ns_DnsIP4addr) Pack(endian binary.ByteOrder) ([]byte, error) {
+	return packTlv(ns_dnsIP4addr, opt.Value[:], endian)
+}
+
+type Ns_DnsIP6addr struct {
+	Value [16]byte
+}
+
+func (opt *Ns_DnsIP6addr) Pack(endian binary.ByteOrder) ([]byte, error) {
+	return packTlv(ns_dnsIP6addr, opt.Value[:], endian)
+}
 
 // PcapError
 type PcapError struct {
@@ -582,7 +708,7 @@ type PcapngReader struct {
 	//NanoSecond bool // true if PcapRecHdr.TsUsec should be interpretted as nano seconds
 }
 
-type RawOption struct {
+type TLV struct {
 	Type   uint16
 	Length uint16
 	Value  []byte
@@ -598,34 +724,37 @@ func Reader(fh io.Reader) (pr *PcapngReader) {
 	return pr
 }
 
-func getRawOptionList(options []byte, endian binary.ByteOrder) (optionList []RawOption, err error) {
+func getTlvList(buf []byte, endian binary.ByteOrder) (remainingBuf []byte, tlvList []TLV, err error) {
 
-	for len(options) > 0 {
-		var option RawOption
+	for len(buf) > 0 {
+		var tlv TLV
 
-		if err := binary.Read(bytes.NewBuffer(options[0:2]), endian, &option.Type); err != nil {
-			return nil, err
+		if err := binary.Read(bytes.NewBuffer(buf[0:2]), endian, &tlv.Type); err != nil {
+			return nil, nil, err
 		}
-		if err := binary.Read(bytes.NewBuffer(options[2:4]), endian, &option.Length); err != nil {
-			return nil, err
+		if err := binary.Read(bytes.NewBuffer(buf[2:4]), endian, &tlv.Length); err != nil {
+			return nil, nil, err
 		}
+		buf = buf[4:]
 
-		length := int(option.Length)
-		if length == 0 {
-			//fmt.Printf("optionType=%v optionLength=%v\n", option.Type, option.Length)
+		// is this the last TLV
+		if tlv.Type == 0 && tlv.Length == 0 {
 			break
 		}
 
-		option.Value = options[4 : 4+length]
+		length := int(tlv.Length)
+
+		tlv.Value = buf[:length]
 		padding := (4 - (length & 3)) & 3
 		paddedLength := length + padding
-		options = options[4+paddedLength:]
 
-		optionList = append(optionList, option)
+		buf = buf[paddedLength:]
 
-		//fmt.Printf("optionType=%v optionLength=%v padding=%v paddedLength=%v optionValue=%x\n", option.Type, option.Length, padding, paddedLength, option.Value)
+		tlvList = append(tlvList, tlv)
+
+		//fmt.Printf("optionType=%v optionLength=%v padding=%v paddedLength=%v optionValue=%x\n", tlv.Type, tlv.Length, padding, paddedLength, tlv.Value)
 	}
-	return optionList, nil
+	return buf, tlvList, nil
 }
 
 // Read reads the next block from the pcap file.
@@ -691,31 +820,35 @@ func (pr *PcapngReader) Read() (block interface{}, err error) {
 		var minorVersion uint16
 		var sectionLength int64
 
-		if binary.Read(bytes.NewBuffer(buf[12:14]), pr.Endian, &majorVersion) != nil ||
-			binary.Read(bytes.NewBuffer(buf[14:16]), pr.Endian, &minorVersion) != nil ||
-			binary.Read(bytes.NewBuffer(buf[16:24]), pr.Endian, &sectionLength) != nil {
+		if err := binary.Read(bytes.NewBuffer(buf[12:14]), pr.Endian, &majorVersion); err != nil {
+			return nil, err
+		}
+	    if err := binary.Read(bytes.NewBuffer(buf[14:16]), pr.Endian, &minorVersion); err != nil {
+			return nil, err
+		}
+	    if err := binary.Read(bytes.NewBuffer(buf[16:24]), pr.Endian, &sectionLength); err != nil {
 			return nil, err
 		}
 
 		optionLen := int(blockTotalLength) - 28
 		optionBuf := buf[24 : 24+optionLen]
-		rawOptionList, err := getRawOptionList(optionBuf, pr.Endian)
+		_, tlvList, err := getTlvList(optionBuf, pr.Endian)
 		if err != nil {
 			return nil, err
 		}
 
 		var options []Option
 
-		for _, opt := range rawOptionList {
-			switch opt.Type {
+		for _, tlv := range tlvList {
+			switch tlv.Type {
 			case opt_comment:
-				options = append(options, &Opt_Comment{string(opt.Value)})
+				options = append(options, &Opt_Comment{string(tlv.Value)})
 			case shb_hardware:
-				options = append(options, &Shb_Hardware{string(opt.Value)})
+				options = append(options, &Shb_Hardware{string(tlv.Value)})
 			case shb_os:
-				options = append(options, &Shb_Os{string(opt.Value)})
+				options = append(options, &Shb_Os{string(tlv.Value)})
 			case shb_userappl:
-				options = append(options, &Shb_Userappl{string(opt.Value)})
+				options = append(options, &Shb_Userappl{string(tlv.Value)})
 			}
 		}
 
@@ -734,31 +867,33 @@ func (pr *PcapngReader) Read() (block interface{}, err error) {
 		var linkType uint16
 		var snapLen uint32
 
-		if binary.Read(bytes.NewBuffer(buf[8:10]), pr.Endian, &linkType) != nil ||
-			binary.Read(bytes.NewBuffer(buf[12:16]), pr.Endian, &snapLen) != nil {
+		if err := binary.Read(bytes.NewBuffer(buf[8:10]), pr.Endian, &linkType); err != nil {
+			return nil, err
+		}
+		if err := binary.Read(bytes.NewBuffer(buf[12:16]), pr.Endian, &snapLen); err != nil {
 			return nil, err
 		}
 
 		optionLen := int(blockTotalLength) - 20
 		optionBuf := buf[16 : 16+optionLen]
-		rawOptionList, err := getRawOptionList(optionBuf, pr.Endian)
+		_, tlvList, err := getTlvList(optionBuf, pr.Endian)
 		if err != nil {
 			return nil, err
 		}
 
 		var options []Option
 
-		for _, opt := range rawOptionList {
-			fmt.Printf(" opt.Type=%v opt.Length=%v opt.Value=%x\n", opt.Type, opt.Length, opt.Value)
-			switch opt.Type {
+		for _, tlv := range tlvList {
+			//fmt.Printf(" tlv.Type=%v tlv.Length=%v tlv.Value=%x\n", tlv.Type, tlv.Length, tlv.Value)
+			switch tlv.Type {
 			case opt_comment:
-				options = append(options, &Opt_Comment{string(opt.Value)})
+				options = append(options, &Opt_Comment{string(tlv.Value)})
 			case if_name:
-				options = append(options, &If_Name{string(opt.Value)})
+				options = append(options, &If_Name{string(tlv.Value)})
 			case if_tsresol:
-				options = append(options, &If_Tsresol{uint8(opt.Value[0])})
+				options = append(options, &If_Tsresol{uint8(tlv.Value[0])})
 			case if_os:
-				options = append(options, &If_Os{string(opt.Value)})
+				options = append(options, &If_Os{string(tlv.Value)})
 			}
 		}
 
@@ -776,9 +911,13 @@ func (pr *PcapngReader) Read() (block interface{}, err error) {
 		var timestampHigh uint32
 		var timestampLow uint32
 
-		if binary.Read(bytes.NewBuffer(buf[8:12]), pr.Endian, &interfaceID) != nil ||
-			binary.Read(bytes.NewBuffer(buf[12:16]), pr.Endian, &timestampHigh) != nil ||
-			binary.Read(bytes.NewBuffer(buf[16:20]), pr.Endian, &timestampLow) != nil {
+		if err := binary.Read(bytes.NewBuffer(buf[8:12]), pr.Endian, &interfaceID); err != nil {
+			return nil, err
+		}
+		if err := binary.Read(bytes.NewBuffer(buf[12:16]), pr.Endian, &timestampHigh); err != nil {
+			return nil, err
+		}
+		if err := binary.Read(bytes.NewBuffer(buf[16:20]), pr.Endian, &timestampLow); err != nil {
 			return nil, err
 		}
 		//fmt.Printf("interfaceID=%v\n", interfaceID)
@@ -786,56 +925,56 @@ func (pr *PcapngReader) Read() (block interface{}, err error) {
 
 		optionLen := int(blockTotalLength) - 24
 		optionBuf := buf[20 : 20+optionLen]
-		rawOptionList, err := getRawOptionList(optionBuf, pr.Endian)
+		_, tlvList, err := getTlvList(optionBuf, pr.Endian)
 		if err != nil {
 			return nil, err
 		}
 
 		var options []Option
 
-		for _, opt := range rawOptionList {
-			switch opt.Type {
+		for _, tlv := range tlvList {
+			switch tlv.Type {
 			case opt_comment:
-				options = append(options, &Opt_Comment{string(opt.Value)})
+				options = append(options, &Opt_Comment{string(tlv.Value)})
 			case isb_starttime:
 				var option Isb_Starttime
-				if err := binary.Read(bytes.NewBuffer(opt.Value), pr.Endian, &option); err != nil {
+				if err := binary.Read(bytes.NewBuffer(tlv.Value), pr.Endian, &option); err != nil {
 					return nil, err
 				}
 				options = append(options, &option)
 			case isb_endtime:
 				var option Isb_Endtime
-				if err := binary.Read(bytes.NewBuffer(opt.Value), pr.Endian, &option); err != nil {
+				if err := binary.Read(bytes.NewBuffer(tlv.Value), pr.Endian, &option); err != nil {
 					return nil, err
 				}
 				options = append(options, &option)
 			case isb_ifrecv:
 				var option Isb_Ifrecv
-				if err := binary.Read(bytes.NewBuffer(opt.Value), pr.Endian, &option); err != nil {
+				if err := binary.Read(bytes.NewBuffer(tlv.Value), pr.Endian, &option); err != nil {
 					return nil, err
 				}
 				options = append(options, &option)
 			case isb_ifdrop:
 				var option Isb_Ifdrop
-				if err := binary.Read(bytes.NewBuffer(opt.Value), pr.Endian, &option); err != nil {
+				if err := binary.Read(bytes.NewBuffer(tlv.Value), pr.Endian, &option); err != nil {
 					return nil, err
 				}
 				options = append(options, &option)
 			case isb_filteraccept:
 				var option Isb_Filteraccept
-				if err := binary.Read(bytes.NewBuffer(opt.Value), pr.Endian, &option); err != nil {
+				if err := binary.Read(bytes.NewBuffer(tlv.Value), pr.Endian, &option); err != nil {
 					return nil, err
 				}
 				options = append(options, &option)
 			case isb_osdrop:
 				var option Isb_Osdrop
-				if err := binary.Read(bytes.NewBuffer(opt.Value), pr.Endian, &option); err != nil {
+				if err := binary.Read(bytes.NewBuffer(tlv.Value), pr.Endian, &option); err != nil {
 					return nil, err
 				}
 				options = append(options, &option)
 			case isb_usrdeliv:
 				var option Isb_Usrdeliv
-				if err := binary.Read(bytes.NewBuffer(opt.Value), pr.Endian, &option); err != nil {
+				if err := binary.Read(bytes.NewBuffer(tlv.Value), pr.Endian, &option); err != nil {
 					return nil, err
 				}
 				options = append(options, &option)
@@ -859,11 +998,19 @@ func (pr *PcapngReader) Read() (block interface{}, err error) {
 		var capturedPacketLength uint32
 		var originalPacketLength uint32
 
-		if binary.Read(bytes.NewBuffer(buf[8:12]), pr.Endian, &interfaceID) != nil ||
-			binary.Read(bytes.NewBuffer(buf[12:16]), pr.Endian, &timestampHigh) != nil ||
-			binary.Read(bytes.NewBuffer(buf[16:20]), pr.Endian, &timestampLow) != nil ||
-			binary.Read(bytes.NewBuffer(buf[20:24]), pr.Endian, &capturedPacketLength) != nil ||
-			binary.Read(bytes.NewBuffer(buf[24:28]), pr.Endian, &originalPacketLength) != nil {
+		if err := binary.Read(bytes.NewBuffer(buf[8:12]), pr.Endian, &interfaceID); err != nil {
+			return nil, err
+		}
+		if err := binary.Read(bytes.NewBuffer(buf[12:16]), pr.Endian, &timestampHigh); err != nil {
+			return nil, err
+		}
+		if err := binary.Read(bytes.NewBuffer(buf[16:20]), pr.Endian, &timestampLow); err != nil {
+			return nil, err
+		}
+		if err := binary.Read(bytes.NewBuffer(buf[20:24]), pr.Endian, &capturedPacketLength); err != nil {
+			return nil, err
+		}
+		if err := binary.Read(bytes.NewBuffer(buf[24:28]), pr.Endian, &originalPacketLength); err != nil {
 			return nil, err
 		}
 		//fmt.Printf("interfaceID=%v\n", interfaceID)
@@ -880,45 +1027,45 @@ func (pr *PcapngReader) Read() (block interface{}, err error) {
 		optionLen := int(blockTotalLength) - (32 + paddedPacketLen)
 		//fmt.Printf("optionLen=%v\n", optionLen)
 		optionBuf := buf[28+paddedPacketLen : 28+paddedPacketLen+optionLen]
-		rawOptionList, err := getRawOptionList(optionBuf, pr.Endian)
+		_, tlvList, err := getTlvList(optionBuf, pr.Endian)
 		if err != nil {
 			return nil, err
 		}
 
 		var options []Option
 
-		for _, opt := range rawOptionList {
-			fmt.Printf(" opt.Type=%v opt.Length=%v opt.Value=%x\n", opt.Type, opt.Length, opt.Value)
-			switch opt.Type {
+		for _, tlv := range tlvList {
+			//fmt.Printf(" tlv.Type=%v tlv.Length=%v tlv.Value=%x\n", tlv.Type, tlv.Length, tlv.Value)
+			switch tlv.Type {
 			case opt_comment:
-				options = append(options, &Opt_Comment{string(opt.Value)})
+				options = append(options, &Opt_Comment{string(tlv.Value)})
 			case epb_flags:
 				var option Epb_Flags
-				if err := binary.Read(bytes.NewBuffer(opt.Value), pr.Endian, &option); err != nil {
+				if err := binary.Read(bytes.NewBuffer(tlv.Value), pr.Endian, &option); err != nil {
 					return nil, err
 				}
 				options = append(options, &option)
 			case epb_hash:
 				var option Epb_Hash
-				if err := binary.Read(bytes.NewBuffer(opt.Value), pr.Endian, &option); err != nil {
+				if err := binary.Read(bytes.NewBuffer(tlv.Value), pr.Endian, &option); err != nil {
 					return nil, err
 				}
 				options = append(options, &option)
 			case epb_dropcount:
 				var option Epb_Dropcount
-				if err := binary.Read(bytes.NewBuffer(opt.Value), pr.Endian, &option); err != nil {
+				if err := binary.Read(bytes.NewBuffer(tlv.Value), pr.Endian, &option); err != nil {
 					return nil, err
 				}
 				options = append(options, &option)
 			case epb_packetid:
 				var option Epb_Packetid
-				if err := binary.Read(bytes.NewBuffer(opt.Value), pr.Endian, &option); err != nil {
+				if err := binary.Read(bytes.NewBuffer(tlv.Value), pr.Endian, &option); err != nil {
 					return nil, err
 				}
 				options = append(options, &option)
 			case epb_queue:
 				var option Epb_Queue
-				if err := binary.Read(bytes.NewBuffer(opt.Value), pr.Endian, &option); err != nil {
+				if err := binary.Read(bytes.NewBuffer(tlv.Value), pr.Endian, &option); err != nil {
 					return nil, err
 				}
 				options = append(options, &option)
@@ -937,6 +1084,59 @@ func (pr *PcapngReader) Read() (block interface{}, err error) {
 			capturedPacketLength,
 			originalPacketLength,
 			packetData,
+			options}
+
+	} else if blockType == NAME_RESOLUTION_BLOCK {
+
+		// get records
+		bodyLen := int(blockTotalLength) - 12
+		body := buf[8 : 8+bodyLen]
+		body, tlvList, err := getTlvList(body, pr.Endian)
+		if err != nil {
+			return nil, err
+		}
+
+		var records []NbrRecord
+
+		for _, tlv := range tlvList {
+			//fmt.Printf("tlv.Type=%v tlv.Length=%v tlv.Value=%x\n", tlv.Type, tlv.Length, tlv.Value)
+			switch tlv.Type {
+			case nrb_record_ipv4:
+				records = append(records, &Nrb_Record_ipv4{tlv.Value})
+			case nrb_record_ipv6:
+				records = append(records, &Nrb_Record_ipv6{tlv.Value})
+			}
+		}
+
+		_, tlvList, err = getTlvList(body, pr.Endian)
+		if err != nil {
+			return nil, err
+		}
+
+		var options []Option
+
+		for _, tlv := range tlvList {
+			//fmt.Printf("tlv.Type=%v tlv.Length=%v tlv.Value=%x\n", tlv.Type, tlv.Length, tlv.Value)
+			switch tlv.Type {
+			case opt_comment:
+				options = append(options, &Opt_Comment{string(tlv.Value)})
+			case ns_dnsname:
+				options = append(options, &Ns_Dnsname{string(tlv.Value)})
+			case ns_dnsIP4addr:
+				var option Ns_DnsIP4addr
+				copy(option.Value[:], tlv.Value)
+				options = append(options, &option)
+			case ns_dnsIP6addr:
+				var option Ns_DnsIP6addr
+				copy(option.Value[:], tlv.Value)
+				options = append(options, &option)
+			}
+		}
+
+		block = &NameResolutionBlock{
+			blockType,
+			blockTotalLength,
+			records,
 			options}
 
 	} else {

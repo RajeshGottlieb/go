@@ -114,9 +114,56 @@ func main() {
 
 		} else if b, ok := block.(*pcapng.EnhancedPacketBlock); ok {
 
-			fmt.Printf("# EnhancedPacketBlock %v: Type=0x%08x TotalLength=%v\n", count+1, b.Type, b.TotalLength)
+			fmt.Printf("# EnhancedPacketBlock %v: Type=0x%08x TotalLength=%v InterfaceID=%v\n", count+1, b.Type, b.TotalLength, b.InterfaceID)
+
+			for _, opt := range b.Options {
+				switch option := opt.(type) {
+				case *pcapng.Opt_Comment:
+					fmt.Printf("#  opt_comment=%v\n", option.Value)
+				case *pcapng.Epb_Flags:
+					fmt.Printf("#  epb_flags=%v\n", option.Value)
+				case *pcapng.Epb_Hash:
+					fmt.Printf("#  epb_hash=%v,%v\n", option.Value)
+				case *pcapng.Epb_Dropcount:
+					fmt.Printf("#  epb_dropcount=%v\n", option.Value)
+				case *pcapng.Epb_Packetid:
+					fmt.Printf("#  epb_packetid=%v\n", option.Value)
+				case *pcapng.Epb_Queue:
+					fmt.Printf("#  epb_queue=%v\n", option.Value)
+				}
+			}
+
 			if err = pw.Write(b); err != nil {
 				panic(err)
+			}
+
+		} else if b, ok := block.(*pcapng.NameResolutionBlock); ok {
+
+			fmt.Printf("# NameResolutionBlock %v: Type=0x%08x TotalLength=%v\n", count+1, b.Type, b.TotalLength)
+			if err = pw.Write(b); err != nil {
+				panic(err)
+			}
+
+			for _, rec := range b.Records {
+				switch record := rec.(type) {
+				case *pcapng.Nrb_Record_ipv4:
+					fmt.Printf("#  nrb_record_ipv4=%x\n", record.Value)
+				case *pcapng.Nrb_Record_ipv6:
+					fmt.Printf("#  nrb_record_ipv6=%x\n", record.Value)
+				}
+			}
+
+			for _, opt := range b.Options {
+				switch option := opt.(type) {
+				case *pcapng.Opt_Comment:
+					fmt.Printf("#  opt_comment=%v\n", option.Value)
+				case *pcapng.Ns_Dnsname:
+					fmt.Printf("#  ns_dnsname=%v\n", option.Value)
+				case *pcapng.Ns_DnsIP4addr:
+					fmt.Printf("#  ns_dnsIP4addr=%x\n", option.Value)
+				case *pcapng.Ns_DnsIP6addr:
+					fmt.Printf("#  ns_dnsIP6addr=%x\n", option.Value)
+				}
 			}
 
 		} else if b, ok := block.(*pcapng.GenericBlock); ok {
